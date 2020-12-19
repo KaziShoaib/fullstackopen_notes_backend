@@ -1,16 +1,16 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
-const url = process.env.MONGODB_URI
+const url = process.env.MONGODB_URI;
 
-console.log('connecting to ',url)
+console.log('connecting to ',url);
 
 mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false, useCreateIndex: true })
-  .then(result => {
-    console.log('connected to MONGODB')
+  .then(() => {
+    console.log('connected to MONGODB');
   })
-  .catch((error)=>{
+  .catch((error) => {
     console.log('error connecting to MONGODB: ',error.message);
-  })
+  });
 
 const noteSchema = new mongoose.Schema({
   content: {
@@ -22,19 +22,18 @@ const noteSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
-  important: { 
+  important: {
     type : Boolean,
     required : true,
   }
-  
-})
+});
 
 noteSchema.set('toJSON', {
   transform : (document, returnedObject) => {
-    returnedObject.id = returnedObject._id.toString()
-    delete returnedObject._id
-    delete returnedObject.__v
+    returnedObject.id = returnedObject._id.toString();
+    delete returnedObject._id;
+    delete returnedObject.__v;
   }
-})
+});
 
 module.exports = mongoose.model('Note', noteSchema);
