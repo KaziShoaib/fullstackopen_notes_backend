@@ -78,12 +78,18 @@ app.put('/api/notes/:id', (request, response, next) => {
   // the edited object is not a Note model, it is a normal javascript object
   const note = {
     content: body.content,
-    important: body.important,
+    important: body.important
   }
 
   Note.findByIdAndUpdate(request.params.id, note, {new : true, runValidators: true})
-    .then(updatedNote => updatedNote.toJSON())
-    .then(updatedAndFormattedNote => response.json(updatedAndFormattedNote)) 
+    .then(updatedNote => {
+      if(updatedNote){
+        response.json(updatedNote.toJSON());
+      }
+      else {
+        response.status(404).end();
+      }
+    }) 
     .catch(error => next(error)) //sending error the errorHandler middleware
 })
 
