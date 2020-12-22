@@ -1,3 +1,5 @@
+// some dummy functions for learning testing
+
 const palindrome = (string) => {
   return string
     .split('')

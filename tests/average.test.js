@@ -1,4 +1,5 @@
 //jest test files should have .test in their name
+// tests the average function from ../utils/for_testing
 
 const average = require('../utils/for_testing').average;
 

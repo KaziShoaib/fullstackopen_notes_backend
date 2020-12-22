@@ -2,32 +2,45 @@ const notesRouter = require('express').Router();
 const Note = require('../models/note');
 
 
-notesRouter.get('/', (request, response) => {
-  Note.find({})
-    .then(returnedNotes => returnedNotes.map(note => note.toJSON()))
-    .then(returnedAndFormattedNotes => response.json(returnedAndFormattedNotes));
+notesRouter.get('/', async (request, response) => {
+  const notes = await Note.find({});
+  response.json(notes);
 });
 
 
-notesRouter.get('/:id', (request, response, next) => {
-  Note.findById(request.params.id)
-    .then(note => {
-      if(note){
-        response.json(note.toJSON());
-      }
-      else{
-        response.status(404).end();
-      }
-    })
-    .catch(error => next(error));
-});
+notesRouter.get('/:id', async (request, response, next) => {
+  // try {
+  //   const note = await Note.findById(request.params.id);
+  //   if(note){
+  //     response.json(note);
+  //   }
+  //   else{
+  //     response.status(404).end();
+  //   }
+  // } catch(exception){
+  //   next(exception);
+  //}
 
+  // we can do remove the try catch block from here because we have the
+  // express-async-errors library
+  // if any exception occurs the library will automatically transfer that
+  // to the error handler middleware
+  // the next in the parameters is not required anymore but it is left there
+  //for future reference
 
-notesRouter.post('/', (request, response, next) => {
-  const body = request.body;
-  if(body.content === undefined){
-    return response.status(400).json({ error: 'content missing' });
+  const note = await Note.findById(request.params.id);
+  if(note){
+    response.json(note);
   }
+  else{
+    response.status(404).end();
+  }
+
+});
+
+
+notesRouter.post('/', async (request, response, next) => {
+  const body = request.body;
 
   let note = new Note({
     content : body.content,
@@ -35,20 +48,46 @@ notesRouter.post('/', (request, response, next) => {
     important : body.important || false,
   });
 
-  note.save()
-    .then(savedNote => savedNote.toJSON())
-    .then(savedAndFormattedNote => response.json(savedAndFormattedNote))
-    .catch(error => next(error));
+  // try {
+  //   const savedNote = await note.save();
+  //   response.json(savedNote);
+  // } catch(exception) {
+  //   next(exception);
+  // }
+
+  // we can do remove the try catch block from here because we have the
+  // express-async-errors library
+  // if any exception occurs the library will automatically transfer that
+  // to the error handler middleware
+  // the next in the parameters is not required anymore, but it is left there
+  //for future reference
+
+  const savedNote = await note.save();
+  response.json(savedNote);
 });
 
 
-notesRouter.delete('/:id', (request, response, next) => {
-  Note.findByIdAndRemove(request.params.id)
-    .then(() => response.status(204).end())
-    .catch(error => next(error));
+notesRouter.delete('/:id', async (request, response, next) => {
+  // try{
+  //   await Note.findByIdAndDelete(request.params.id);
+  //   response.status(204).end();
+  // } catch(exception) {
+  //   next(exception);
+  // }
+
+  // we can do remove the try catch block from here because we have the
+  // express-async-errors library
+  // if any exception occurs the library will automatically transfer that
+  // to the error handler middleware
+  // the next in the parameters is not required anymore but it is left there
+  //for future reference
+
+  await Note.findByIdAndDelete(request.params.id);
+  response.status(204).end();
 });
 
 
+// one old school router with .then chains left for reference
 notesRouter.put('/:id', (request, response, next) => {
   const body = request.body;
 
@@ -58,6 +97,10 @@ notesRouter.put('/:id', (request, response, next) => {
     important: body.important
   };
 
+  //normally validators don't work while editing
+  //adding runValidators : true will enforce validations during editing
+  //normally findByIdAndUpdate returns the old object
+  // new : true will make it return the new edited object
   Note.findByIdAndUpdate(request.params.id, note, { new : true, runValidators: true })
     .then(updatedNote => {
       if(updatedNote){

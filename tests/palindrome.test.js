@@ -1,4 +1,5 @@
 //jest test files should have .test in their name
+//tests the palindrome function from ../utils/for_testing
 
 const palindrome = require('../utils/for_testing').palindrome;
 
