@@ -1,9 +1,15 @@
 const notesRouter = require('express').Router();
 const Note = require('../models/note');
+const User = require('../models/user');
 
 
 notesRouter.get('/', async (request, response) => {
-  const notes = await Note.find({});
+  const notes = await Note
+    .find({}).populate('user', { username: 1, name: 1 });
+  //the populate method will take the id from the user field of the note objects
+  //then fetch user objects using those ids, there is a ref : 'User' in the model definition
+  //username :1, name: 1 means that we just want to see the name and username of the user
+  //who created the note
   response.json(notes);
 });
 
@@ -41,11 +47,13 @@ notesRouter.get('/:id', async (request, response, next) => {
 
 notesRouter.post('/', async (request, response, next) => {
   const body = request.body;
+  const user = await User.findById(body.userId);
 
   let note = new Note({
     content : body.content,
     date : new Date(),
     important : body.important || false,
+    user : user._id
   });
 
   // try {
@@ -63,6 +71,11 @@ notesRouter.post('/', async (request, response, next) => {
   //for future reference
 
   const savedNote = await note.save();
+
+  //adding the savedNotes' id to the user's notes list
+  user.notes = user.notes.concat(savedNote._id);
+  await user.save();
+
   response.json(savedNote);
 });
 
