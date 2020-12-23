@@ -1,4 +1,5 @@
 const notesRouter = require('express').Router();
+const jwt = require('jsonwebtoken');
 const Note = require('../models/note');
 const User = require('../models/user');
 
@@ -45,9 +46,28 @@ notesRouter.get('/:id', async (request, response, next) => {
 });
 
 
+//a function to check if there is a token with the post requests
+const getTokenFrom = request => {
+  const authorization = request.get('authorization'); // the token is sent under the request header 'authorziation'
+  // the name of the used scheme is bearer
+  if(authorization && authorization.toLowerCase().startsWith('bearer ')){
+    return authorization.substring(7);
+  }
+
+  return null;
+};
+
+
 notesRouter.post('/', async (request, response, next) => {
   const body = request.body;
-  const user = await User.findById(body.userId);
+
+  const token = getTokenFrom(request); //getting the authorization token from request using the function defined above
+  const decodedToken = jwt.verify(token, process.env.SECRET);
+  if(!(token && decodedToken.id)){
+    return response.status(401).json({ error: 'token missing or invalid' });
+  }
+
+  const user = await User.findById(decodedToken.id);
 
   let note = new Note({
     content : body.content,

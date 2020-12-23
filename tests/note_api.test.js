@@ -166,7 +166,7 @@ describe('when there is initially one user in DB', () => {
   });
 
 
-  test.only('user creation succeeds with a fresh username', async () => {
+  test('user creation succeeds with a fresh username', async () => {
     const usersAtStart = await helper.usersInDB();
     const newUser = {
       username: 'mluukkai',
@@ -188,7 +188,7 @@ describe('when there is initially one user in DB', () => {
   });
 
 
-  test.only('user creation fails with a proper statuscode and message if username is already taken', async () => {
+  test('user creation fails with a proper statuscode and message if username is already taken', async () => {
     const usersAtStart = await helper.usersInDB();
 
     const newUser = {
