@@ -60,15 +60,15 @@ const getTokenFrom = request => {
 
 notesRouter.post('/', async (request, response, next) => {
   const body = request.body;
-
   const token = getTokenFrom(request); //getting the authorization token from request using the function defined above
   const decodedToken = jwt.verify(token, process.env.SECRET);
+  //missing or invalid tokens are actually transferred to the errorHandler middleware
+  //this if block does not seem to do anything
   if(!(token && decodedToken.id)){
     return response.status(401).json({ error: 'token missing or invalid' });
   }
 
   const user = await User.findById(decodedToken.id);
-
   let note = new Note({
     content : body.content,
     date : new Date(),
@@ -95,7 +95,6 @@ notesRouter.post('/', async (request, response, next) => {
   //adding the savedNotes' id to the user's notes list
   user.notes = user.notes.concat(savedNote._id);
   await user.save();
-
   response.json(savedNote);
 });
 

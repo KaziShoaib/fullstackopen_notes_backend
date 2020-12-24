@@ -10,8 +10,19 @@ const Note = require('../models/note');
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
 
+
 beforeEach(async () => {
   await Note.deleteMany({});
+  await User.deleteMany({});
+
+  //creating a new user
+  const passwordHash = await bcrypt.hash(helper.initialUser.password, 10);
+  const user = new User({
+    username: helper.initialUser.username,
+    name: helper.initialUser.name,
+    passwordHash
+  });
+  await user.save();
   //console.log('cleared');
 
   // saving all the notes in the initialNotes array with forEach does not work
@@ -27,8 +38,15 @@ beforeEach(async () => {
   // });
 
   for (let note of helper.initialNotes){
-    let noteObject = new Note(note);
+    let noteObject = new Note({
+      ...note,
+      user: user._id
+      //adding the saved user's id as the creator of the note
+    });
     await noteObject.save();
+    user.notes = user.notes.concat(noteObject._id);
+    //adding the saved note's id to the user's notes field
+    await user.save();
     //console.log('saved');
   }
 
@@ -80,7 +98,6 @@ describe('viewing a specific note', () => {
 
   test('fails with statuscode 404 if note does not exist', async () => {
     const validNonExistingId = await helper.nonExistingId();
-    //console.log(validNonExistingId);
     await api
       .get(`/api/notes/${validNonExistingId}`)
       .expect(404);
@@ -99,7 +116,16 @@ describe('viewing a specific note', () => {
 
 describe('addition of a new note', () => {
 
-  test('succeeds with valid data', async () => {
+  test('succeeds with valid data, when a user is logged in', async () => {
+
+    //logging in a user before posting note
+    const loginResponse = await api
+      .post('/api/login')
+      .send(helper.initialUser);
+
+    const token = loginResponse.body.token;
+    const authHeader = { 'authorization' : `bearer ${token}` };
+
     const newNote = {
       content: 'async/await simplifies making async calls',
       important: true
@@ -107,6 +133,7 @@ describe('addition of a new note', () => {
 
     await api
       .post('/api/notes')
+      .set(authHeader)
       .send(newNote)
       .expect(200)
       .expect('Content-Type', /application\/json/);
@@ -118,13 +145,42 @@ describe('addition of a new note', () => {
   });
 
 
+  test('fails with statuscode 401 if no user is logged in', async () => {
+    const newNote = {
+      content: 'cannot save note without logging in',
+      important: true
+    };
+
+    //missing authorization header errors are handled by the errorHandler middleware
+    const result = await api
+      .post('/api/notes')
+      .send(newNote)
+      .expect(401)
+      .expect('Content-Type', /application\/json/);
+
+    expect(result.body.error).toBe('invalid token');
+
+    const notesAtEnd = await helper.notesInDB();
+    expect(notesAtEnd).toHaveLength(helper.initialNotes.length);
+
+  });
+
+
   test('fails with status code 400 if data invaild', async () => {
+    const loginResponse = await api
+      .post('/api/login')
+      .send(helper.initialUser);
+
+    const token = loginResponse.body.token;
+    const authHeader = { 'authorization': `bearer ${token}` };
+
     const newNote = {
       important : false
     };
 
     await api
       .post('/api/notes')
+      .set(authHeader)
       .send(newNote)
       .expect(400);
 
@@ -157,14 +213,6 @@ describe('deletion of a note', () => {
 
 
 describe('when there is initially one user in DB', () => {
-
-  beforeEach(async () => {
-    await User.deleteMany({});
-    const passwordHash = await bcrypt.hash('sekret', 10);
-    const user = new User({ username: 'root', passwordHash });
-    await user.save();
-  });
-
 
   test('user creation succeeds with a fresh username', async () => {
     const usersAtStart = await helper.usersInDB();
@@ -203,9 +251,34 @@ describe('when there is initially one user in DB', () => {
       .expect(400)
       .expect('Content-Type', /application\/json/);
 
+    //we are using toContain because the actual error message is very large
     expect(result.body.error).toContain('`username` to be unique');
     const usersAtEnd = await helper.usersInDB();
     expect(usersAtEnd).toHaveLength(usersAtStart.length);
+  });
+
+
+  test('succeeds to log in with correct id and password', async () => {
+    const loginResponse = await api
+      .post('/api/login')
+      .send(helper.initialUser)
+      .expect(200);
+    expect(loginResponse.body.username).toBe(helper.initialUser.username);
+    expect(loginResponse.body.token).toBeDefined();
+  });
+
+
+  test('fails to log in with wrong password', async () => {
+    const userWithWrongPassword = { ...helper.initialUser, password:'wrong password' };
+    const loginResponse = await api
+      .post('/api/login')
+      .send(userWithWrongPassword)
+      .expect(401)
+      .expect('Content-Type',/application\/json/);
+
+    //this error is coming from the login controller, not the middleware
+    expect(loginResponse.body.error).toBe('invalid username or password');
+    expect(loginResponse.body.token).not.toBeDefined();
   });
 });
 

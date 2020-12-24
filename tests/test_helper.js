@@ -16,13 +16,23 @@ const initialNotes = [
   }
 ];
 
+const initialUser = {
+  username: 'root',
+  name: 'test-user',
+  password: 'sekret'
+};
+
 const nonExistingId = async () => {
+  const users = await User.find({});
+  const user  = users[0];
   const note = new Note({
     content:'will delete soon',
     date: new Date(),
-    important: false
+    important: false,
+    user: user._id
   });
   await note.save();
+  //we are not adding the note's id in the user object becuase the note will be deleted
   await note.remove();
 
   return note._id.toString();
@@ -38,4 +48,4 @@ const usersInDB = async () => {
   return users.map(user => user.toJSON());
 };
 
-module.exports = { initialNotes, nonExistingId, notesInDB, usersInDB };
+module.exports = { initialNotes, initialUser, nonExistingId, notesInDB, usersInDB };
