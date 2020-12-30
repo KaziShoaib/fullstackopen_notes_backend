@@ -38,6 +38,12 @@ app.use('/api/notes', notesRouter); // assigning the base URL to the route contr
 app.use('/api/users', usersRouter); // assigning the base URL to the route cntrollers
 app.use('/api/login', loginRouter); // assigning the base URL to the log in controllers
 
+if(process.env.NODE_ENV === 'test'){
+  //this controller can remove all users and notes from test database
+  const testingRouter = require('./controllers/testing');
+  app.use('/api/testing', testingRouter);
+}
+
 app.use(middleware.unknownEndpoint);
 app.use(middleware.errorHandler);
 
